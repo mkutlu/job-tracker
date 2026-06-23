@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  website     String?
+  industry    String?
+  size        String?  // e.g. "1-10", "11-50", "51-200", "201-500", "500+"
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  jobs        Job[]
+  contacts    Contact[]
+
+  @@index([userId])
+  @@map("companies")
+}
+
+model Job {
+  id              String      @id @default(cuid())
+  userId          String
+  title           String
+  companyId       String
+  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status          JobStatus   @default(BOOKMARKED)
+  location        String?
+  locationType    LocationType?  // REMOTE, HYBRID, ONSITE
+  salary          String?
+  jobUrl          String?
+  jobDescription  String?     @db.Text
+  notes           String?     @db.Text
+  appliedAt       DateTime?
+  deadlineAt      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  contacts        Contact[]
+  activities      Activity[]
+  jdAnalysis      JDAnalysis?
+
+  @@index([userId])
+  @@map("jobs")
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  title     String?
+  email     String?
+  linkedin  String?
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  jobId     String?
+  job       Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("contacts")
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  jobId     String
+  job       Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  type      ActivityType
+  title     String
+  notes     String?
+  date      DateTime     @default(now())
+  createdAt DateTime     @default(now())
+
+  @@map("activities")
+}
+
+model JDAnalysis {
+  id                String   @id @default(cuid())
+  jobId             String   @unique
+  job               Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  summary           String?  @db.Text
+  requiredSkills    String[] // extracted required skills
+  niceToHaveSkills  String[] // extracted nice-to-have skills
+  keywords          String[] // important keywords for resume/cover letter
+  seniorityLevel    String?
+  salaryRange       String?
+  redFlags          String[] // potential red flags in the JD
+  matchScore        Int?     // 0-100, how well user profile matches
+  rawAnalysis       Json?    // full Claude response
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("jd_analyses")
+}
+
+enum JobStatus {
+  BOOKMARKED
+  APPLYING
+  APPLIED
+  PHONE_SCREEN
+  INTERVIEW
+  TECHNICAL
+  OFFER
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+
+  @@map("job_status")
+}
+
+enum LocationType {
+  REMOTE
+  HYBRID
+  ONSITE
+
+  @@map("location_type")
+}
+
+enum ActivityType {
+  NOTE
+  EMAIL
+  CALL
+  INTERVIEW
+  OFFER
+  REJECTION
+  OTHER
+
+  @@map("activity_type")
+}
