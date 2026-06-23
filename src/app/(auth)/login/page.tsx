@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("signin")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [signupSent, setSignupSent] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,6 +37,9 @@ export default function LoginPage() {
         setIsLoading(false)
         return
       }
+      setIsLoading(false)
+      setSignupSent(true)
+      return
     }
 
     router.push("/jobs")
@@ -43,6 +47,26 @@ export default function LoginPage() {
   }
 
   const isSignIn = mode === "signin"
+
+  if (signupSent) {
+    return (
+      <div className="bg-card border border-border rounded-xl shadow-sm p-8 max-w-sm w-full text-center">
+        <div className="flex flex-col items-center gap-3 mb-4">
+          <Briefcase className="text-primary" size={28} />
+          <h1 className="text-xl font-semibold text-foreground">Check your email</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            We sent a confirmation link to your inbox. Click it to activate your account, then come back to sign in.
+          </p>
+        </div>
+        <button
+          onClick={() => { setMode("signin"); setSignupSent(false) }}
+          className="text-sm text-primary hover:underline mt-2"
+        >
+          Back to sign in
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-card border border-border rounded-xl shadow-sm p-8 max-w-sm w-full">
@@ -116,7 +140,7 @@ export default function LoginPage() {
             Don&apos;t have an account?{" "}
             <span
               className="text-primary cursor-pointer"
-              onClick={() => { setMode("signup"); setError(null) }}
+              onClick={() => { setMode("signup"); setError(null); setSignupSent(false) }}
             >
               Sign up
             </span>
@@ -126,7 +150,7 @@ export default function LoginPage() {
             Already have an account?{" "}
             <span
               className="text-primary cursor-pointer"
-              onClick={() => { setMode("signin"); setError(null) }}
+              onClick={() => { setMode("signin"); setError(null); setSignupSent(false) }}
             >
               Sign in
             </span>

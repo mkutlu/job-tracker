@@ -126,6 +126,28 @@ enum LocationType {
   @@map("location_type")
 }
 
+enum UserJobStatus {
+  EMPLOYED
+  UNEMPLOYED
+  FREELANCE
+  STUDENT
+
+  @@map("user_job_status")
+}
+
+model Profile {
+  id           String        @id @default(cuid())
+  userId       String        @unique
+  firstName    String
+  lastName     String
+  currentTitle String?
+  jobStatus    UserJobStatus
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("profiles")
+}
+
 enum ActivityType {
   NOTE
   EMAIL
