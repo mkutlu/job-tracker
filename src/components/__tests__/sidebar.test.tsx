@@ -4,6 +4,7 @@
  */
 import React from "react"
 import { render, screen } from "@testing-library/react"
+import { UserJobStatus } from "@prisma/client"
 import { Sidebar } from "../sidebar"
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -35,7 +36,7 @@ const baseProfile = {
   firstName: "Jane",
   lastName: "Doe",
   email: "jane@example.com",
-  jobStatus: "EMPLOYED" as const,
+  jobStatus: "EMPLOYED" as UserJobStatus,
 }
 
 function renderSidebar(overrides: Partial<typeof baseProfile & { currentTitle?: string }> = {}) {
@@ -83,7 +84,7 @@ describe("Sidebar — user info display", () => {
   })
 
   it("maps every UserJobStatus to a label", () => {
-    const cases: Array<[typeof baseProfile["jobStatus"], string]> = [
+    const cases: Array<[UserJobStatus, string]> = [
       ["EMPLOYED",   "Currently employed"],
       ["UNEMPLOYED", "Open to work"],
       ["FREELANCE",  "Freelancing"],
