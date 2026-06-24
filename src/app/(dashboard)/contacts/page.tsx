@@ -1,6 +1,6 @@
 export default function ContactsPage() {
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <h1 className="text-2xl font-semibold text-slate-900">Contacts</h1>
       <p className="mt-1 text-sm text-slate-500">Recruiters and hiring managers</p>
 

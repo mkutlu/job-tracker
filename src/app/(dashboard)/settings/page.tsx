@@ -17,7 +17,7 @@ export default function SettingsPage() {
   const { palette, setPalette } = usePalette()
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 sm:p-8 max-w-2xl">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">Manage your preferences</p>
@@ -34,7 +34,7 @@ export default function SettingsPage() {
           <div>
             <p className="text-sm font-medium text-card-foreground mb-1">Theme</p>
             <p className="text-xs text-muted-foreground mb-3">Choose your preferred color mode</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
@@ -61,7 +61,7 @@ export default function SettingsPage() {
             <p className="text-xs text-muted-foreground mb-4">
               Choose a color scheme for the interface
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {PALETTES.map((p) => {
                 const isActive = palette === p.name
                 return (

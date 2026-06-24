@@ -31,7 +31,6 @@ const statusLabel: Record<UserJobStatus, string> = {
   STUDENT:    "Student",
 }
 
-// Stagger container for entrance
 const sidebarVariants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.055, delayChildren: 0.05 } },
@@ -46,10 +45,12 @@ function NavLink({
   href,
   icon: Icon,
   label,
+  onClose,
 }: {
   href: string
   icon: React.ElementType
   label: string
+  onClose?: () => void
 }) {
   const pathname = usePathname()
   const isActive = pathname === href || (href !== "/" && pathname.startsWith(href))
@@ -58,12 +59,12 @@ function NavLink({
     <motion.div variants={slideIn}>
       <Link
         href={href}
+        onClick={onClose}
         className={cn(
           "relative flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium group",
           isActive ? "text-sidebar-primary-foreground" : "text-sidebar-muted"
         )}
       >
-        {/* Sliding active pill — shared layout across all NavLinks */}
         {isActive && (
           <motion.div
             layoutId="nav-active-pill"
@@ -72,7 +73,6 @@ function NavLink({
           />
         )}
 
-        {/* Hover background for inactive items */}
         {!isActive && (
           <motion.div
             className="absolute inset-0 rounded-md"
@@ -83,7 +83,6 @@ function NavLink({
           />
         )}
 
-        {/* Icon */}
         <motion.span
           className={cn(
             "relative z-10 shrink-0 transition-colors",
@@ -95,7 +94,6 @@ function NavLink({
           <Icon size={16} />
         </motion.span>
 
-        {/* Label */}
         <span
           className={cn(
             "relative z-10 transition-colors",
@@ -112,12 +110,12 @@ function NavLink({
 type SidebarProfile = {
   firstName: string
   lastName: string
-  currentTitle?: string
+  currentTitle?: string | null
   jobStatus: UserJobStatus
   email: string
 }
 
-export function Sidebar({ profile }: { profile: SidebarProfile }) {
+export function Sidebar({ profile, onClose }: { profile: SidebarProfile; onClose?: () => void }) {
   const initials = `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
   const subtitle = profile.currentTitle || statusLabel[profile.jobStatus]
 
@@ -148,13 +146,13 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
       {/* Main nav */}
       <nav className="flex flex-col gap-0.5 px-3 py-4 flex-1">
         {navItems.map((item) => (
-          <NavLink key={item.href} {...item} />
+          <NavLink key={item.href} {...item} onClose={onClose} />
         ))}
       </nav>
 
       {/* Settings */}
       <motion.div variants={slideIn} className="px-3 pb-2">
-        <NavLink href="/settings" icon={Settings} label="Settings" />
+        <NavLink href="/settings" icon={Settings} label="Settings" onClose={onClose} />
       </motion.div>
 
       {/* User profile */}
@@ -162,7 +160,6 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
         variants={slideIn}
         className="px-4 py-4 border-t border-sidebar-border flex items-center gap-3"
       >
-        {/* Avatar */}
         <motion.div
           whileHover={{ scale: 1.08 }}
           transition={{ type: "spring", stiffness: 400, damping: 20 }}
@@ -173,7 +170,6 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
           </span>
         </motion.div>
 
-        {/* Info */}
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-sidebar-foreground truncate leading-tight">
             {profile.firstName} {profile.lastName}
@@ -183,7 +179,6 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
           </p>
         </div>
 
-        {/* Logout */}
         <form action={signOut}>
           <motion.button
             type="submit"

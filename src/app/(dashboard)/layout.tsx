@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 import { createServerSupabaseClient } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
-import { Sidebar } from "@/components/sidebar"
+import { DashboardShell } from "@/components/dashboard-shell"
 
 export default async function DashboardLayout({
   children,
@@ -17,19 +17,16 @@ export default async function DashboardLayout({
   if (!profile) redirect("/onboarding")
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar
-        profile={{
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          currentTitle: profile.currentTitle ?? undefined,
-          jobStatus: profile.jobStatus,
-          email: user.email!,
-        }}
-      />
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
-    </div>
+    <DashboardShell
+      profile={{
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        currentTitle: profile.currentTitle ?? undefined,
+        jobStatus: profile.jobStatus,
+        email: user.email!,
+      }}
+    >
+      {children}
+    </DashboardShell>
   )
 }
