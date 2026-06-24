@@ -246,7 +246,7 @@ export function JobForm({ open, onClose, job }: Props) {
 
               <SectionLabel>Location & Salary</SectionLabel>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-muted-foreground">Location</label>
                   <input name="location" defaultValue={job?.location ?? ""} placeholder="e.g. New York, NY" className={inputClass} />
@@ -283,7 +283,7 @@ export function JobForm({ open, onClose, job }: Props) {
 
               <SectionLabel>Source & Contact</SectionLabel>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-muted-foreground">Source</label>
                   <select name="source" defaultValue={job?.source ?? ""} className={selectClass}>
@@ -306,7 +306,7 @@ export function JobForm({ open, onClose, job }: Props) {
 
               <SectionLabel>Dates</SectionLabel>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-muted-foreground">Applied on</label>
                   <input name="appliedAt" type="date" defaultValue={toDateInput(job?.appliedAt)} className={inputClass} />

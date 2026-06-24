@@ -87,11 +87,16 @@ export function JobsTable({ jobs, onEdit, onAdd }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              {["Company / Role", "Status", "Priority", "Excitement", "Salary", "Location", "Source", "Next step", "Added", ""].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">
-                  {h}
-                </th>
-              ))}
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Company / Role</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Status</th>
+              <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Priority</th>
+              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Excitement</th>
+              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Salary</th>
+              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Location</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Source</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Next step</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Added</th>
+              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -116,7 +121,7 @@ export function JobsTable({ jobs, onEdit, onAdd }: Props) {
                 </td>
 
                 {/* Priority */}
-                <td className="px-4 py-3">
+                <td className="hidden sm:table-cell px-4 py-3">
                   <div className="flex items-center gap-1.5">
                     <span className={cn("w-2 h-2 rounded-full shrink-0", PRIORITY_CONFIG[job.priority].dot)} />
                     <span className="text-xs text-muted-foreground">{PRIORITY_CONFIG[job.priority].label}</span>
@@ -124,32 +129,32 @@ export function JobsTable({ jobs, onEdit, onAdd }: Props) {
                 </td>
 
                 {/* Excitement */}
-                <td className="px-4 py-3">
+                <td className="hidden md:table-cell px-4 py-3">
                   <ExcitementStars value={job.excitement} />
                 </td>
 
                 {/* Salary */}
-                <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                <td className="hidden md:table-cell px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                   {formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}
                 </td>
 
                 {/* Location */}
-                <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                <td className="hidden md:table-cell px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                   {job.locationType ? LOCATION_LABELS[job.locationType] : (job.location ?? "—")}
                 </td>
 
                 {/* Source */}
-                <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                <td className="hidden lg:table-cell px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                   {job.source ? SOURCE_LABELS[job.source] : "—"}
                 </td>
 
                 {/* Next step */}
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="hidden lg:table-cell px-4 py-3 whitespace-nowrap">
                   <NextStepCell date={job.nextStepAt} />
                 </td>
 
                 {/* Added */}
-                <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                <td className="hidden lg:table-cell px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                   {new Date(job.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </td>
 
