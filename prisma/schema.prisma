@@ -27,26 +27,35 @@ model Company {
 }
 
 model Job {
-  id              String      @id @default(cuid())
-  userId          String
-  title           String
-  companyId       String
-  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  status          JobStatus   @default(BOOKMARKED)
-  location        String?
-  locationType    LocationType?  // REMOTE, HYBRID, ONSITE
-  salary          String?
-  jobUrl          String?
-  jobDescription  String?     @db.Text
-  notes           String?     @db.Text
-  appliedAt       DateTime?
-  deadlineAt      DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id             String        @id @default(cuid())
+  userId         String
+  title          String
+  companyId      String
+  company        Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status         JobStatus     @default(BOOKMARKED)
+  priority       Priority      @default(MEDIUM)
+  excitement     Int?
+  location       String?
+  locationType   LocationType?
+  salaryMin      Int?
+  salaryMax      Int?
+  salaryCurrency String?       @default("USD")
+  jobUrl         String?
+  jobDescription String?       @db.Text
+  notes          String?       @db.Text
+  source         JobSource?
+  recruiterName  String?
+  nextStepAt     DateTime?
+  offerAmount    Int?
+  offerDeadline  DateTime?
+  appliedAt      DateTime?
+  deadlineAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  contacts        Contact[]
-  activities      Activity[]
-  jdAnalysis      JDAnalysis?
+  contacts       Contact[]
+  activities     Activity[]
+  jdAnalysis     JDAnalysis?
 
   @@index([userId])
   @@map("jobs")
@@ -124,6 +133,25 @@ enum LocationType {
   ONSITE
 
   @@map("location_type")
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+
+  @@map("priority")
+}
+
+enum JobSource {
+  LINKEDIN
+  REFERRAL
+  COMPANY_SITE
+  RECRUITER
+  JOB_BOARD
+  OTHER
+
+  @@map("job_source")
 }
 
 enum UserJobStatus {
