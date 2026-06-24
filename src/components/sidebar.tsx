@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { motion } from "framer-motion"
 import {
   LayoutDashboard,
   Briefcase,
@@ -30,6 +31,17 @@ const statusLabel: Record<UserJobStatus, string> = {
   STUDENT:    "Student",
 }
 
+// Stagger container for entrance
+const sidebarVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.055, delayChildren: 0.05 } },
+}
+
+const slideIn = {
+  hidden: { opacity: 0, x: -14 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] } },
+}
+
 function NavLink({
   href,
   icon: Icon,
@@ -43,18 +55,57 @@ function NavLink({
   const isActive = pathname === href || (href !== "/" && pathname.startsWith(href))
 
   return (
-    <Link
-      href={href}
-      className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-        isActive
-          ? "bg-sidebar-primary text-sidebar-primary-foreground"
-          : "text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground"
-      )}
-    >
-      <Icon size={16} />
-      {label}
-    </Link>
+    <motion.div variants={slideIn}>
+      <Link
+        href={href}
+        className={cn(
+          "relative flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium group",
+          isActive ? "text-sidebar-primary-foreground" : "text-sidebar-muted"
+        )}
+      >
+        {/* Sliding active pill — shared layout across all NavLinks */}
+        {isActive && (
+          <motion.div
+            layoutId="nav-active-pill"
+            className="absolute inset-0 bg-sidebar-primary rounded-md"
+            transition={{ type: "spring", stiffness: 500, damping: 40 }}
+          />
+        )}
+
+        {/* Hover background for inactive items */}
+        {!isActive && (
+          <motion.div
+            className="absolute inset-0 rounded-md"
+            initial={{ opacity: 0 }}
+            whileHover={{ opacity: 1 }}
+            transition={{ duration: 0.15 }}
+            style={{ background: "rgba(255,255,255,0.07)" }}
+          />
+        )}
+
+        {/* Icon */}
+        <motion.span
+          className={cn(
+            "relative z-10 shrink-0 transition-colors",
+            !isActive && "group-hover:text-sidebar-foreground"
+          )}
+          whileHover={{ scale: 1.2 }}
+          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+        >
+          <Icon size={16} />
+        </motion.span>
+
+        {/* Label */}
+        <span
+          className={cn(
+            "relative z-10 transition-colors",
+            !isActive && "group-hover:text-sidebar-foreground"
+          )}
+        >
+          {label}
+        </span>
+      </Link>
+    </motion.div>
   )
 }
 
@@ -71,14 +122,28 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
   const subtitle = profile.currentTitle || statusLabel[profile.jobStatus]
 
   return (
-    <aside className="flex flex-col w-60 min-h-screen bg-sidebar text-sidebar-foreground shrink-0 border-r border-sidebar-border">
+    <motion.aside
+      variants={sidebarVariants}
+      initial="hidden"
+      animate="visible"
+      className="flex flex-col w-60 min-h-screen bg-sidebar text-sidebar-foreground shrink-0 border-r border-sidebar-border"
+    >
       {/* Logo */}
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-sidebar-border">
-        <Briefcase size={18} className="text-sidebar-logo" />
+      <motion.div
+        variants={slideIn}
+        className="flex items-center gap-2 px-6 py-5 border-b border-sidebar-border"
+      >
+        <motion.div
+          initial={{ rotate: -15, scale: 0.7, opacity: 0 }}
+          animate={{ rotate: 0, scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 18, delay: 0.1 }}
+        >
+          <Briefcase size={18} className="text-sidebar-logo" />
+        </motion.div>
         <span className="font-semibold text-base tracking-tight text-sidebar-foreground">
           Job Tracker
         </span>
-      </div>
+      </motion.div>
 
       {/* Main nav */}
       <nav className="flex flex-col gap-0.5 px-3 py-4 flex-1">
@@ -88,18 +153,25 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
       </nav>
 
       {/* Settings */}
-      <div className="px-3 pb-2">
+      <motion.div variants={slideIn} className="px-3 pb-2">
         <NavLink href="/settings" icon={Settings} label="Settings" />
-      </div>
+      </motion.div>
 
       {/* User profile */}
-      <div className="px-4 py-4 border-t border-sidebar-border flex items-center gap-3">
+      <motion.div
+        variants={slideIn}
+        className="px-4 py-4 border-t border-sidebar-border flex items-center gap-3"
+      >
         {/* Avatar */}
-        <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0">
+        <motion.div
+          whileHover={{ scale: 1.08 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+          className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center shrink-0 cursor-default"
+        >
           <span className="text-xs font-semibold text-sidebar-primary-foreground">
             {initials}
           </span>
-        </div>
+        </motion.div>
 
         {/* Info */}
         <div className="min-w-0 flex-1">
@@ -113,15 +185,18 @@ export function Sidebar({ profile }: { profile: SidebarProfile }) {
 
         {/* Logout */}
         <form action={signOut}>
-          <button
+          <motion.button
             type="submit"
             title="Sign out"
-            className="text-sidebar-muted hover:text-sidebar-foreground transition-colors p-1 rounded"
+            className="text-sidebar-muted p-1 rounded"
+            whileHover={{ scale: 1.15, rotate: -8, color: "var(--sidebar-foreground)" }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
           >
             <LogOut size={15} />
-          </button>
+          </motion.button>
         </form>
-      </div>
-    </aside>
+      </motion.div>
+    </motion.aside>
   )
 }
