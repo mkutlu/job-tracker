@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Briefcase, Pencil, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Briefcase, Pencil, Trash2 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { Prisma } from "@prisma/client"
 import { JobStatusBadge } from "./job-status-badge"
@@ -11,9 +11,21 @@ import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 import { cn } from "@/lib/utils"
 
+export type SortCol = "title" | "company" | "status" | "priority" | "excitement" | "salary" | "nextStep" | "added"
+export type SortDir = "asc" | "desc"
+
 type JobWithCompany = Prisma.JobGetPayload<{
   include: { company: { select: { name: true } } }
 }>
+
+type Props = {
+  jobs: JobWithCompany[]
+  onEdit: (job: JobWithCompany) => void
+  onAdd: () => void
+  sortCol: SortCol
+  sortDir: SortDir
+  onSort: (col: SortCol) => void
+}
 
 function NextStepCell({ date }: { date: Date | null }) {
   if (!date) return <span className="text-muted-foreground/40">—</span>
@@ -39,14 +51,49 @@ function ExcitementStars({ value }: { value: number | null }) {
   )
 }
 
+function SortableHeader({
+  col,
+  label,
+  sortCol,
+  sortDir,
+  onSort,
+  className,
+}: {
+  col: SortCol
+  label: string
+  sortCol: SortCol
+  sortDir: SortDir
+  onSort: (col: SortCol) => void
+  className?: string
+}) {
+  const active = sortCol === col
+  const Icon = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown
 
-type Props = {
-  jobs: JobWithCompany[]
-  onEdit: (job: JobWithCompany) => void
-  onAdd: () => void
+  return (
+    <th
+      onClick={() => onSort(col)}
+      className={cn(
+        "px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap cursor-pointer select-none group",
+        className
+      )}
+    >
+      <div className="flex items-center gap-1">
+        <span className={cn("transition-colors", active ? "text-foreground" : "group-hover:text-foreground")}>
+          {label}
+        </span>
+        <Icon
+          size={11}
+          className={cn(
+            "transition-opacity shrink-0",
+            active ? "opacity-70 text-foreground" : "opacity-0 group-hover:opacity-40"
+          )}
+        />
+      </div>
+    </th>
+  )
 }
 
-export function JobsTable({ jobs, onEdit, onAdd }: Props) {
+export function JobsTable({ jobs, onEdit, onAdd, sortCol, sortDir, onSort }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
 
@@ -87,15 +134,15 @@ export function JobsTable({ jobs, onEdit, onAdd }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Company / Role</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Status</th>
-              <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Priority</th>
-              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Excitement</th>
-              <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Salary</th>
+              <SortableHeader col="title"      label="Company / Role" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableHeader col="status"     label="Status"         sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableHeader col="priority"   label="Priority"       sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="hidden sm:table-cell" />
+              <SortableHeader col="excitement" label="Excitement"     sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="hidden md:table-cell" />
+              <SortableHeader col="salary"     label="Salary"         sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="hidden md:table-cell" />
               <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Location</th>
               <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Source</th>
-              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Next step</th>
-              <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">Added</th>
+              <SortableHeader col="nextStep"   label="Next step"      sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="hidden lg:table-cell" />
+              <SortableHeader col="added"      label="Added"          sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="hidden lg:table-cell" />
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -109,18 +156,15 @@ export function JobsTable({ jobs, onEdit, onAdd }: Props) {
                 onClick={() => onEdit(job)}
                 className="hover:bg-accent/40 cursor-pointer transition-colors group"
               >
-                {/* Company / Title */}
                 <td className="px-4 py-3">
                   <p className="font-medium text-foreground leading-tight">{job.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{job.company.name}</p>
                 </td>
 
-                {/* Status */}
                 <td className="px-4 py-3">
                   <JobStatusBadge status={job.status} />
                 </td>
 
-                {/* Priority */}
                 <td className="hidden sm:table-cell px-4 py-3">
                   <div className="flex items-center gap-1.5">
                     <span className={cn("w-2 h-2 rounded-full shrink-0", PRIORITY_CONFIG[job.priority].dot)} />
@@ -128,37 +172,30 @@ export function JobsTable({ jobs, onEdit, onAdd }: Props) {
                   </div>
                 </td>
 
-                {/* Excitement */}
                 <td className="hidden md:table-cell px-4 py-3">
                   <ExcitementStars value={job.excitement} />
                 </td>
 
-                {/* Salary */}
                 <td className="hidden md:table-cell px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                   {formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency)}
                 </td>
 
-                {/* Location */}
                 <td className="hidden md:table-cell px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                   {job.locationType ? LOCATION_LABELS[job.locationType] : (job.location ?? "—")}
                 </td>
 
-                {/* Source */}
                 <td className="hidden lg:table-cell px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                   {job.source ? SOURCE_LABELS[job.source] : "—"}
                 </td>
 
-                {/* Next step */}
                 <td className="hidden lg:table-cell px-4 py-3 whitespace-nowrap">
                   <NextStepCell date={job.nextStepAt} />
                 </td>
 
-                {/* Added */}
                 <td className="hidden lg:table-cell px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                   {new Date(job.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </td>
 
-                {/* Actions */}
                 <td className="px-4 py-3">
                   <div
                     className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
