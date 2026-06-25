@@ -7,15 +7,9 @@ import { ActivityChart } from "@/components/overview/activity-chart"
 import { PipelineChart } from "@/components/overview/pipeline-chart"
 import { SourceBars } from "@/components/overview/source-bars"
 import { UpcomingSteps } from "@/components/overview/upcoming-steps"
-import {
-  Briefcase,
-  TrendingUp,
-  MessageSquare,
-  Trophy,
-  BarChart2,
-} from "lucide-react"
+import { StatCards } from "@/components/overview/stat-cards"
+import type { StatDef } from "@/components/overview/stat-cards"
 
-// Hex values matching JOB_STATUS_CONFIG colors for use in Recharts SVG
 const STATUS_CHART_COLORS: Record<JobStatus, string> = {
   BOOKMARKED:   "#94a3b8",
   APPLYING:     "#60a5fa",
@@ -34,6 +28,10 @@ const STATUS_ORDER: JobStatus[] = [
   "PHONE_SCREEN", "INTERVIEW", "TECHNICAL",
   "OFFER", "ACCEPTED", "REJECTED", "WITHDRAWN",
 ]
+
+function pct(n: number, d: number) {
+  return d > 0 ? Math.round((n / d) * 100) : 0
+}
 
 export default async function OverviewPage() {
   const supabase = await createServerSupabaseClient()
@@ -57,6 +55,7 @@ export default async function OverviewPage() {
   })
 
   // ── Stats ─────────────────────────────────────────────────────
+  const now = new Date()
   const total = jobs.length
   const active = jobs.filter(
     (j) => !["REJECTED", "WITHDRAWN", "ACCEPTED"].includes(j.status)
@@ -73,8 +72,49 @@ export default async function OverviewPage() {
   const gotResponse = jobs.filter(
     (j) => !["BOOKMARKED", "APPLYING", "APPLIED"].includes(j.status)
   ).length
-  const responseRate =
-    submitted > 0 ? Math.round((gotResponse / submitted) * 100) : null
+  const responseRate = submitted > 0 ? pct(gotResponse, submitted) : null
+
+  const weekAgo = new Date(now)
+  weekAgo.setDate(weekAgo.getDate() - 7)
+  const thisWeek = jobs.filter((j) => new Date(j.createdAt) >= weekAgo).length
+
+  const stats: StatDef[] = [
+    {
+      variant: "total",
+      label: "Applications",
+      value: total,
+      sub: thisWeek > 0 ? `+${thisWeek} this week` : "all time",
+    },
+    {
+      variant: "active",
+      label: "Active",
+      value: active,
+      sub: total > 0 ? `${pct(active, total)}% of total` : "in pipeline",
+    },
+    {
+      variant: "interviews",
+      label: "Interviews",
+      value: interviews,
+      sub: active > 0 ? `${pct(interviews, active)}% of active` : "at any stage",
+    },
+    {
+      variant: "offers",
+      label: "Offers",
+      value: offers,
+      sub: interviews > 0 ? `${pct(offers, interviews)}% of interviews` : "received",
+    },
+    ...(responseRate !== null
+      ? ([
+          {
+            variant: "responseRate",
+            label: "Response Rate",
+            value: responseRate,
+            isPercent: true,
+            sub: `of ${submitted} submitted`,
+          },
+        ] satisfies StatDef[])
+      : []),
+  ]
 
   // ── Pipeline chart ────────────────────────────────────────────
   const pipelineData = STATUS_ORDER.map((s) => ({
@@ -84,7 +124,6 @@ export default async function OverviewPage() {
   })).filter((d) => d.value > 0)
 
   // ── Weekly activity (last 8 weeks) ────────────────────────────
-  const now = new Date()
   const weeklyData = Array.from({ length: 8 }, (_, i) => {
     const start = new Date(now)
     start.setDate(now.getDate() - (7 - i) * 7)
@@ -92,10 +131,7 @@ export default async function OverviewPage() {
     const end = new Date(start)
     end.setDate(start.getDate() + 7)
     return {
-      week: start.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      }),
+      week: start.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       count: jobs.filter((j) => {
         const d = new Date(j.createdAt)
         return d >= start && d < end
@@ -132,48 +168,6 @@ export default async function OverviewPage() {
       date: j.nextStepAt!.toISOString(),
     }))
 
-  const stats = [
-    {
-      label: "Total Applied",
-      value: total,
-      sub: "all time",
-      icon: Briefcase,
-      accent: true,
-    },
-    {
-      label: "Active",
-      value: active,
-      sub: "in pipeline",
-      icon: TrendingUp,
-      accent: false,
-    },
-    {
-      label: "Interviews",
-      value: interviews,
-      sub: "at any stage",
-      icon: MessageSquare,
-      accent: false,
-    },
-    {
-      label: "Offers",
-      value: offers,
-      sub: "received",
-      icon: Trophy,
-      accent: false,
-    },
-    ...(responseRate !== null
-      ? [
-          {
-            label: "Response Rate",
-            value: `${responseRate}%`,
-            sub: "of submitted",
-            icon: BarChart2,
-            accent: false,
-          },
-        ]
-      : []),
-  ]
-
   return (
     <div className="p-4 sm:p-8 space-y-5">
       {/* Header */}
@@ -184,56 +178,7 @@ export default async function OverviewPage() {
         </p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {stats.map((s) => {
-          const Icon = s.icon
-          return (
-            <div
-              key={s.label}
-              className={
-                s.accent
-                  ? "col-span-2 sm:col-span-1 rounded-xl p-5 bg-primary text-primary-foreground"
-                  : "rounded-xl border border-border bg-card p-5"
-              }
-            >
-              <div className="flex items-center justify-between mb-3">
-                <p
-                  className={
-                    s.accent
-                      ? "text-xs font-medium uppercase tracking-widest opacity-70"
-                      : "text-xs font-medium uppercase tracking-widest text-muted-foreground"
-                  }
-                >
-                  {s.label}
-                </p>
-                <Icon
-                  size={14}
-                  className={
-                    s.accent ? "opacity-60" : "text-muted-foreground/50"
-                  }
-                />
-              </div>
-              <p
-                className={
-                  s.accent
-                    ? "text-3xl font-bold"
-                    : "text-3xl font-bold text-foreground"
-                }
-              >
-                {s.value}
-              </p>
-              <p
-                className={
-                  s.accent ? "mt-1 text-xs opacity-60" : "mt-1 text-xs text-muted-foreground"
-                }
-              >
-                {s.sub}
-              </p>
-            </div>
-          )
-        })}
-      </div>
+      <StatCards stats={stats} />
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
