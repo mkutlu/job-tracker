@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { createServerSupabaseClient } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
@@ -16,7 +17,9 @@ export default async function JobsPage() {
 
   return (
     <div className="p-4 sm:p-8">
-      <JobsClient jobs={jobs} />
+      <Suspense fallback={<div className="animate-pulse h-96 rounded-xl bg-muted" />}>
+        <JobsClient jobs={jobs} />
+      </Suspense>
     </div>
   )
 }

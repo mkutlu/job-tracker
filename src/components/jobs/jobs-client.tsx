@@ -1,47 +1,132 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
+import { useSearchParams, usePathname, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Plus, Search } from "lucide-react"
-import { Prisma } from "@prisma/client"
+import { Prisma, JobStatus, Priority, JobSource, LocationType } from "@prisma/client"
 import { JobsTable } from "./jobs-table"
 import { JobForm } from "./job-form"
+import { JobsFilters, FilterState, EMPTY_FILTERS } from "./jobs-filters"
+import type { SortCol, SortDir } from "./jobs-table"
 
 type JobWithCompany = Prisma.JobGetPayload<{
   include: { company: { select: { name: true } } }
 }>
 
-type Props = {
-  jobs: JobWithCompany[]
+const STATUS_ORDER: Record<JobStatus, number> = {
+  BOOKMARKED: 0, APPLYING: 1, APPLIED: 2, PHONE_SCREEN: 3,
+  INTERVIEW: 4, TECHNICAL: 5, OFFER: 6, ACCEPTED: 7,
+  REJECTED: 8, WITHDRAWN: 9,
+}
+const PRIORITY_ORDER: Record<Priority, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+
+function parseList<T extends string>(val: string | null): T[] {
+  if (!val) return []
+  return val.split(",").filter(Boolean) as T[]
 }
 
-export function JobsClient({ jobs }: Props) {
+export function JobsClient({ jobs }: { jobs: JobWithCompany[] }) {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+
   const [formOpen, setFormOpen] = useState(false)
   const [editingJob, setEditingJob] = useState<JobWithCompany | null>(null)
   const [search, setSearch] = useState("")
 
-  function openAdd() {
-    setEditingJob(null)
-    setFormOpen(true)
+  // ── Read URL params ──────────────────────────────────────────
+  const sortCol  = (searchParams.get("sort") ?? "added") as SortCol
+  const sortDir  = (searchParams.get("dir")  ?? "desc")  as SortDir
+
+  const filters: FilterState = {
+    statuses:       parseList<JobStatus>     (searchParams.get("status")),
+    priorities:     parseList<Priority>      (searchParams.get("priority")),
+    locationTypes:  parseList<LocationType>  (searchParams.get("loc")),
+    sources:        parseList<JobSource>     (searchParams.get("source")),
+    minExcitement:  searchParams.get("excitement") ? Number(searchParams.get("excitement")) : null,
+    days:           searchParams.get("days")        ? Number(searchParams.get("days"))        : null,
   }
 
-  function openEdit(job: JobWithCompany) {
-    setEditingJob(job)
-    setFormOpen(true)
+  // ── URL param writer ─────────────────────────────────────────
+  function updateParams(updates: Record<string, string | null>) {
+    const params = new URLSearchParams(searchParams.toString())
+    for (const [k, v] of Object.entries(updates)) {
+      if (!v) params.delete(k)
+      else params.set(k, v)
+    }
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }
 
-  function closeForm() {
-    setFormOpen(false)
-    setEditingJob(null)
+  function handleSort(col: SortCol) {
+    if (col === sortCol) {
+      updateParams({ dir: sortDir === "asc" ? "desc" : "asc" })
+    } else {
+      updateParams({ sort: col, dir: col === "added" ? "desc" : "asc" })
+    }
   }
 
-  const filtered = search.trim()
-    ? jobs.filter(
-        (j) =>
-          j.title.toLowerCase().includes(search.toLowerCase()) ||
-          j.company.name.toLowerCase().includes(search.toLowerCase())
+  function handleFiltersChange(f: FilterState) {
+    updateParams({
+      status:     f.statuses.join(",")      || null,
+      priority:   f.priorities.join(",")    || null,
+      loc:        f.locationTypes.join(",") || null,
+      source:     f.sources.join(",")       || null,
+      excitement: f.minExcitement?.toString() ?? null,
+      days:       f.days?.toString()          ?? null,
+    })
+  }
+
+  // ── Form helpers ─────────────────────────────────────────────
+  function openAdd()  { setEditingJob(null); setFormOpen(true) }
+  function openEdit(job: JobWithCompany) { setEditingJob(job); setFormOpen(true) }
+  function closeForm() { setFormOpen(false); setEditingJob(null) }
+
+  // ── Filter + sort (client-side) ──────────────────────────────
+  const processed = useMemo(() => {
+    let result = jobs
+
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(
+        (j) => j.title.toLowerCase().includes(q) || j.company.name.toLowerCase().includes(q)
       )
-    : jobs
+    }
+
+    if (filters.statuses.length)      result = result.filter((j) => filters.statuses.includes(j.status))
+    if (filters.priorities.length)    result = result.filter((j) => filters.priorities.includes(j.priority))
+    if (filters.locationTypes.length) result = result.filter((j) => !!j.locationType && filters.locationTypes.includes(j.locationType))
+    if (filters.sources.length)       result = result.filter((j) => !!j.source && filters.sources.includes(j.source))
+    if (filters.minExcitement !== null) {
+      result = result.filter((j) => j.excitement !== null && j.excitement >= filters.minExcitement!)
+    }
+    if (filters.days !== null) {
+      const cutoff = new Date()
+      cutoff.setDate(cutoff.getDate() - filters.days)
+      result = result.filter((j) => new Date(j.createdAt) >= cutoff)
+    }
+
+    const dir = sortDir === "asc" ? 1 : -1
+    return [...result].sort((a, b) => {
+      switch (sortCol) {
+        case "title":   return dir * a.title.localeCompare(b.title)
+        case "company": return dir * a.company.name.localeCompare(b.company.name)
+        case "status":  return dir * (STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+        case "priority":return dir * (PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+        case "excitement": return dir * ((a.excitement ?? 0) - (b.excitement ?? 0))
+        case "salary":  return dir * ((a.salaryMin ?? 0) - (b.salaryMin ?? 0))
+        case "nextStep": {
+          if (!a.nextStepAt && !b.nextStepAt) return 0
+          if (!a.nextStepAt) return 1
+          if (!b.nextStepAt) return -1
+          return dir * (new Date(a.nextStepAt).getTime() - new Date(b.nextStepAt).getTime())
+        }
+        case "added":
+        default: return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      }
+    })
+  }, [jobs, search, filters.statuses, filters.priorities, filters.locationTypes, filters.sources, filters.minExcitement, filters.days, sortCol, sortDir])
 
   return (
     <>
@@ -55,7 +140,6 @@ export function JobsClient({ jobs }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Search */}
           <div className="relative flex-1 sm:flex-none">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <input
@@ -66,7 +150,6 @@ export function JobsClient({ jobs }: Props) {
             />
           </div>
 
-          {/* Add button */}
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
@@ -79,8 +162,23 @@ export function JobsClient({ jobs }: Props) {
         </div>
       </div>
 
+      {/* Filter bar */}
+      <JobsFilters
+        filters={filters}
+        onChange={handleFiltersChange}
+        totalCount={jobs.length}
+        filteredCount={processed.length}
+      />
+
       {/* Table */}
-      <JobsTable jobs={filtered} onEdit={openEdit} onAdd={openAdd} />
+      <JobsTable
+        jobs={processed}
+        onEdit={openEdit}
+        onAdd={openAdd}
+        sortCol={sortCol}
+        sortDir={sortDir}
+        onSort={handleSort}
+      />
 
       {/* Form drawer */}
       <JobForm open={formOpen} onClose={closeForm} job={editingJob} />
