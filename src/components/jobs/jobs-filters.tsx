@@ -57,7 +57,7 @@ function CheckRow({
   onChange: () => void
 }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer group">
+    <label onClick={onChange} className="flex items-center gap-2 cursor-pointer group">
       <span
         className={cn(
           "w-4 h-4 rounded flex items-center justify-center border transition-colors shrink-0",
@@ -66,7 +66,6 @@ function CheckRow({
             ? "bg-primary border-primary"
             : "border-border group-hover:border-ring bg-background"
         )}
-        onClick={onChange}
       >
         {checked && (
           <span className={cn("bg-primary-foreground", radio ? "w-1.5 h-1.5 rounded-full" : "w-2 h-2 block")}
@@ -92,7 +91,7 @@ type PanelProps = {
 
 function FilterPanel({ filters, onTogglePriority, onToggleLocationType, onToggleSource, onMinExcitement, onDays }: PanelProps) {
   return (
-    <div className="absolute top-full mt-1.5 right-0 z-30 w-56 rounded-xl border border-border bg-card shadow-xl p-4 flex flex-col gap-4">
+    <div data-testid="filter-panel" className="absolute top-full mt-1.5 right-0 z-30 w-56 rounded-xl border border-border bg-card shadow-xl p-4 flex flex-col gap-4">
 
       <PanelSection label="Priority">
         {(["HIGH", "MEDIUM", "LOW"] as Priority[]).map((p) => (
