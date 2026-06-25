@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts"
+import { motion } from "framer-motion"
 
 type Props = {
   data: { name: string; value: number; color: string }[]
@@ -16,7 +17,12 @@ type Props = {
 
 export function PipelineChart({ data }: Props) {
   return (
-    <div className="rounded-xl border border-border bg-card p-6 flex flex-col">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.46, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      className="rounded-xl border border-border bg-card p-6 flex flex-col"
+    >
       <h3 className="text-sm font-semibold text-foreground">Pipeline Breakdown</h3>
       <p className="text-xs text-muted-foreground mt-0.5 mb-5">
         Applications by current stage
@@ -68,6 +74,6 @@ export function PipelineChart({ data }: Props) {
           </BarChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </motion.div>
   )
 }

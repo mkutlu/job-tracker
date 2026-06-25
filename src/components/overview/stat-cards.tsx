@@ -96,7 +96,7 @@ export function StatCards({ stats }: { stats: StatDef[] }) {
               duration: 0.45,
               ease: [0.16, 1, 0.3, 1],
             }}
-            className="relative overflow-hidden rounded-2xl border border-border bg-card p-5"
+            className="relative overflow-hidden rounded-xl border border-border bg-card p-5"
           >
             {/* Gradient tint overlay — unique color per metric */}
             <div

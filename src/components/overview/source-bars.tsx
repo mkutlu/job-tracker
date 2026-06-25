@@ -1,3 +1,7 @@
+"use client"
+
+import { motion } from "framer-motion"
+
 type Props = {
   data: { name: string; value: number }[]
   total: number
@@ -5,7 +9,12 @@ type Props = {
 
 export function SourceBars({ data, total }: Props) {
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.62, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      className="rounded-xl border border-border bg-card p-6"
+    >
       <h3 className="text-sm font-semibold text-foreground">Top Sources</h3>
       <p className="text-xs text-muted-foreground mt-0.5 mb-5">
         Where your applications come from
@@ -38,6 +47,6 @@ export function SourceBars({ data, total }: Props) {
           })}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

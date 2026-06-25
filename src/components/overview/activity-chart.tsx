@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts"
+import { motion } from "framer-motion"
 
 type Props = {
   data: { week: string; count: number }[]
@@ -18,7 +19,12 @@ export function ActivityChart({ data }: Props) {
   const hasData = data.some((d) => d.count > 0)
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6 flex flex-col">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.38, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      className="rounded-xl border border-border bg-card p-6 flex flex-col"
+    >
       <h3 className="text-sm font-semibold text-foreground">Application Activity</h3>
       <p className="text-xs text-muted-foreground mt-0.5 mb-5">
         Applications added over the last 8 weeks
@@ -78,6 +84,6 @@ export function ActivityChart({ data }: Props) {
           </AreaChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </motion.div>
   )
 }

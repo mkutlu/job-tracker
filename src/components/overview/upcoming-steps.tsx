@@ -1,5 +1,8 @@
+"use client"
+
 import { formatDistanceToNow } from "date-fns"
 import { CalendarClock } from "lucide-react"
+import { motion } from "framer-motion"
 import { JOB_STATUS_CONFIG } from "@/lib/job-types"
 import { JobStatus } from "@prisma/client"
 import { cn } from "@/lib/utils"
@@ -13,7 +16,12 @@ type Item = {
 
 export function UpcomingSteps({ items }: { items: Item[] }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.54, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      className="rounded-xl border border-border bg-card p-6"
+    >
       <div className="flex items-center gap-2 mb-5">
         <CalendarClock size={14} className="text-primary shrink-0" />
         <h3 className="text-sm font-semibold text-foreground">Upcoming Next Steps</h3>
@@ -74,6 +82,6 @@ export function UpcomingSteps({ items }: { items: Item[] }) {
           })}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
