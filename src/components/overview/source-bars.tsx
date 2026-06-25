@@ -13,7 +13,7 @@ export function SourceBars({ data, total }: Props) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.62, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-      className="rounded-xl border border-border bg-card p-6"
+      className="border border-border bg-card p-6"
     >
       <h3 className="text-sm font-semibold text-foreground">Top Sources</h3>
       <p className="text-xs text-muted-foreground mt-0.5 mb-5">
