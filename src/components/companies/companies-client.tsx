@@ -172,7 +172,7 @@ export function CompaniesClient({ companies }: { companies: Company[] }) {
                         <h3 className="font-semibold text-sm text-foreground leading-tight">
                           {company.name}
                         </h3>
-                        {company.website && (
+                        {company.website && /^https?:\/\//i.test(company.website) && (
                           <a
                             href={company.website}
                             target="_blank"
