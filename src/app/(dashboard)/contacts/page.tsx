@@ -1,12 +1,26 @@
+import { Suspense } from "react"
+import { redirect } from "next/navigation"
+import { createServerSupabaseClient } from "@/lib/supabase-server"
+import { getContacts, getContactFormData } from "@/app/actions/contacts"
+import { ContactsClient } from "@/components/contacts/contacts-client"
+
+async function ContactsContent() {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const [contacts, { companies, jobs }] = await Promise.all([
+    getContacts(),
+    getContactFormData(),
+  ])
+
+  return <ContactsClient contacts={contacts} companies={companies} jobs={jobs} />
+}
+
 export default function ContactsPage() {
   return (
-    <div className="p-4 sm:p-8">
-      <h1 className="text-2xl font-semibold text-slate-900">Contacts</h1>
-      <p className="mt-1 text-sm text-slate-500">Recruiters and hiring managers</p>
-
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
-        No contacts yet.
-      </div>
-    </div>
+    <Suspense fallback={<div className="animate-pulse h-96 m-8 bg-muted" />}>
+      <ContactsContent />
+    </Suspense>
   )
 }
