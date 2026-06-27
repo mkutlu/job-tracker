@@ -169,7 +169,10 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
   const displayVerdict = combinedVerdict ?? result?.verdict ?? null
   const displayScore = combinedScore ?? result?.score ?? null
   const verdict = displayVerdict ? VERDICT_CONFIG[displayVerdict] : null
-  const triggeredCount = result?.signals.filter((s) => s.triggered).length ?? 0
+  const ruleTriggeredCount = result?.signals.filter((s) => s.triggered).length ?? 0
+  const claudeTriggeredCount = claudeAnalysis?.semanticSignals.filter((s) => s.triggered).length ?? 0
+  const totalTriggered = ruleTriggeredCount + claudeTriggeredCount
+  const totalSignals = (result?.signals.length ?? 0) + (claudeAnalysis?.semanticSignals.length ?? 0)
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
@@ -267,7 +270,7 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
                     {verdict.label}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {triggeredCount} of {result.signals.length} signals triggered
+                    {totalTriggered} of {totalSignals} signals triggered
                   </p>
                 </div>
               </div>
