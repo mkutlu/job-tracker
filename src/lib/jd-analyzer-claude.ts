@@ -51,6 +51,48 @@ export const SEMANTIC_SIGNAL_LABELS: Record<SemanticSignal["id"], { label: strin
   },
 }
 
+// ── Tool definition for structured output ──────────────────────
+
+const ANALYSIS_TOOL: Anthropic.Tool = {
+  name: "submit_perm_analysis",
+  description: "Submit the structured PERM analysis result",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      semanticSignals: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: {
+              type: "string",
+              enum: ["vague_location", "salary_precision", "no_company_personality", "passive_impersonal_tone", "artificially_narrow"],
+            },
+            triggered: { type: "boolean" },
+            evidence: { type: "string", description: "Short quoted phrase from JD, or null if not triggered" },
+          },
+          required: ["id", "triggered"],
+        },
+      },
+      claudeVerdict: {
+        type: "string",
+        enum: ["likely_perm", "suspicious", "probably_legitimate"],
+      },
+      claudeScore: {
+        type: "integer",
+        minimum: 0,
+        maximum: 100,
+        description: "0-34 = probably_legitimate, 35-64 = suspicious, 65-100 = likely_perm",
+      },
+      reasoning: {
+        type: "string",
+        description: "2 sentences max explaining the top indicators",
+      },
+    },
+    required: ["semanticSignals", "claudeVerdict", "claudeScore", "reasoning"],
+  },
+}
+
 // ── Prompt ─────────────────────────────────────────────────────
 
 function buildPrompt(jdText: string, triggeredSignals: SignalResult[]): string {
@@ -61,7 +103,7 @@ function buildPrompt(jdText: string, triggeredSignals: SignalResult[]): string {
 
   return [
     "You are a PERM labor certification expert. PERM is a US DOL process companies use to sponsor foreign workers for Green Cards.",
-    "Companies sometimes post dummy job descriptions designed to match one specific foreign worker — written so narrowly that no US worker qualifies.",
+    "Companies sometimes post dummy job descriptions designed to match one specific foreign worker so no qualified US worker can apply.",
     "",
     "A rule-based engine already scanned this JD. Add semantic/tonal signals that regex cannot catch.",
     "",
@@ -73,18 +115,15 @@ function buildPrompt(jdText: string, triggeredSignals: SignalResult[]): string {
     jdText.slice(0, 3000),
     "---",
     "",
-    "Complete the JSON by evaluating these five signals.",
-    "Set triggered to true/false and evidence to a short quoted phrase or null.",
-    "",
-    "Signal definitions:",
+    "Evaluate these five semantic signals and call submit_perm_analysis:",
     "1. vague_location — no specific city/state; just 'client sites' or 'various unanticipated locations'",
-    "2. salary_precision — single exact dollar amount with no range (DOL prevailing wage pattern)",
-    "3. no_company_personality — no mission, culture, benefits, or reason to apply; pure requirements list",
+    "2. salary_precision — single exact dollar amount, no range (DOL prevailing wage pattern)",
+    "3. no_company_personality — no mission, culture, benefits, or reason to apply",
     "4. passive_impersonal_tone — 'applicant must', 'candidate shall' throughout; no inviting voice",
-    "5. artificially_narrow — exact years (not '5+') or hyper-specific tech combinations to exclude most candidates",
+    "5. artificially_narrow — exact years like '7 years' (not '5+') or hyper-specific stack to exclude most candidates",
     "",
-    "Scoring guide: 0-34 = probably_legitimate, 35-64 = suspicious, 65-100 = likely_perm.",
-    "Factor rule engine findings into your score. Keep reasoning to 2 sentences.",
+    "Score: 0-34 = probably_legitimate, 35-64 = suspicious, 65-100 = likely_perm.",
+    "Factor in rule engine findings. All 5 signals must be present in semanticSignals array.",
   ].join("\n")
 }
 
@@ -101,17 +140,20 @@ export async function analyzeJDWithClaude(
   try {
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 600,
-      // Assistant prefill forces JSON output — the model cannot un-say the opening brace
-      messages: [
-        { role: "user", content: buildPrompt(jdText, triggeredSignals) },
-        { role: "assistant", content: "{" },
-      ],
+      max_tokens: 1024,
+      tools: [ANALYSIS_TOOL],
+      tool_choice: { type: "tool", name: "submit_perm_analysis" },
+      messages: [{ role: "user", content: buildPrompt(jdText, triggeredSignals) }],
     })
 
-    const raw = message.content[0].type === "text" ? message.content[0].text : ""
-    const parsed = JSON.parse("{" + raw)
-    return ClaudeAnalysisSchema.parse(parsed)
+    const toolBlock = message.content.find((b) => b.type === "tool_use")
+    if (!toolBlock || toolBlock.type !== "tool_use") {
+      console.error("[jd-analyzer-claude] no tool_use block in response")
+      return null
+    }
+
+    // Zod coerces the input to the right shape and validates
+    return ClaudeAnalysisSchema.parse(toolBlock.input)
   } catch (err) {
     console.error("[jd-analyzer-claude] failed:", err instanceof Error ? err.message : err)
     return null

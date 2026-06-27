@@ -35,7 +35,9 @@ export async function runAnalysis(text: string) {
 
   const result = analyzeJD(trimmed)
   const triggeredSignals = result.signals.filter((s) => s.triggered)
+  console.log("[analyze] calling Claude, triggeredSignals:", triggeredSignals.length)
   const claudeAnalysis = await analyzeJDWithClaude(trimmed, triggeredSignals)
+  console.log("[analyze] claudeAnalysis:", claudeAnalysis ? "received" : "null")
 
   const combinedScore = claudeAnalysis
     ? Math.round(result.score * 0.6 + claudeAnalysis.claudeScore * 0.4)
