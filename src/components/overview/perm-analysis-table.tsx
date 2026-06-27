@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { motion } from "framer-motion"
 import { ShieldAlert, AlertTriangle, CheckCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -78,7 +79,10 @@ export function PermAnalysisTable({ rows }: { rows: PermRow[] }) {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.22, delay: i * 0.04 }}
-              className="flex items-center gap-3 px-4 py-3"
+            >
+            <Link
+              href={`/analyze?jobId=${row.id}`}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors"
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{row.title}</p>
@@ -109,6 +113,7 @@ export function PermAnalysisTable({ rows }: { rows: PermRow[] }) {
                   {timeAgo(analysis.permAnalyzedAt)}
                 </span>
               )}
+            </Link>
             </motion.div>
           )
         })}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   AlertTriangle, CheckCircle, ShieldAlert, ChevronDown,
@@ -145,7 +145,7 @@ function SignalCard({ signal, index }: { signal: SignalResult; index: number }) 
   )
 }
 
-export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
+export function AnalyzeClient({ savedJobs, initialJobId }: { savedJobs: SavedJob[]; initialJobId?: string }) {
   const [text, setText] = useState("")
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [result, setResult] = useState<AnalysisResult | null>(null)
@@ -154,6 +154,17 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
   const [combinedVerdict, setCombinedVerdict] = useState<AnalysisResult["verdict"] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  // Auto-load when arriving via deep link from overview
+  useEffect(() => {
+    if (!initialJobId) return
+    const job = savedJobs.find((j) => j.id === initialJobId)
+    if (!job) return
+    setSelectedJobId(job.id)
+    if (job.jobDescription) setText(job.jobDescription)
+    loadSavedResult(job)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialJobId])
 
   function loadSavedResult(job: SavedJob) {
     const perm = job.jdAnalysis
@@ -234,10 +245,10 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
             <FileText size={14} className="text-muted-foreground shrink-0" />
             <select
               onChange={handleJobSelect}
-              defaultValue=""
+              value={selectedJobId ?? ""}
               className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/60 transition-colors"
             >
-              <option value="" disabled>Load from saved application…</option>
+              <option value="" disabled={!!selectedJobId}>Load from saved application…</option>
               {savedJobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.title} @ {j.company.name}{j.jdAnalysis?.permScore != null ? " ✓" : ""}
