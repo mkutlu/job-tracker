@@ -12,11 +12,22 @@ import type { ClaudeAnalysis } from "@/lib/jd-analyzer-claude"
 import { SEMANTIC_SIGNAL_LABELS } from "@/lib/jd-analyzer-claude"
 import { cn } from "@/lib/utils"
 
+type PermData = {
+  result: AnalysisResult
+  claudeAnalysis: ClaudeAnalysis | null
+}
+
 type SavedJob = {
   id: string
   title: string
   jobDescription: string | null
   company: { name: string }
+  jdAnalysis: {
+    permScore: number | null
+    permVerdict: string | null
+    permData: unknown
+    permAnalyzedAt: string | Date | null
+  } | null
 }
 
 const VERDICT_CONFIG = {
@@ -136,6 +147,7 @@ function SignalCard({ signal, index }: { signal: SignalResult; index: number }) 
 
 export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
   const [text, setText] = useState("")
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [claudeAnalysis, setClaudeAnalysis] = useState<ClaudeAnalysis | null>(null)
   const [combinedScore, setCombinedScore] = useState<number | null>(null)
@@ -143,9 +155,31 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  function loadSavedResult(job: SavedJob) {
+    const perm = job.jdAnalysis
+    if (!perm?.permScore || !perm.permVerdict || !perm.permData) return false
+    const data = perm.permData as PermData
+    if (!data.result) return false
+    setResult(data.result)
+    setClaudeAnalysis(data.claudeAnalysis ?? null)
+    setCombinedScore(perm.permScore)
+    setCombinedVerdict(perm.permVerdict as AnalysisResult["verdict"])
+    return true
+  }
+
   function handleJobSelect(e: React.ChangeEvent<HTMLSelectElement>) {
     const job = savedJobs.find((j) => j.id === e.target.value)
-    if (job?.jobDescription) setText(job.jobDescription)
+    if (!job) return
+    setSelectedJobId(job.id)
+    if (job.jobDescription) setText(job.jobDescription)
+    setError(null)
+    // Auto-load cached result if available
+    if (!loadSavedResult(job)) {
+      setResult(null)
+      setClaudeAnalysis(null)
+      setCombinedScore(null)
+      setCombinedVerdict(null)
+    }
   }
 
   function handleAnalyze() {
@@ -154,7 +188,7 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
     setCombinedScore(null)
     setCombinedVerdict(null)
     startTransition(async () => {
-      const res = await runAnalysis(text)
+      const res = await runAnalysis(text, selectedJobId ?? undefined)
       if (res.success) {
         setResult(res.result)
         setClaudeAnalysis(res.claudeAnalysis ?? null)
@@ -206,7 +240,7 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
               <option value="" disabled>Load from saved application…</option>
               {savedJobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.title} @ {j.company.name}
+                  {j.title} @ {j.company.name}{j.jdAnalysis?.permScore != null ? " ✓" : ""}
                 </option>
               ))}
             </select>
