@@ -28,7 +28,8 @@ const TRIGGERED_SIGNALS: SignalResult[] = [
   },
 ]
 
-const CLAUDE_JSON = JSON.stringify({
+// Simulate the model's continuation after the "{" prefill
+const CLAUDE_CONTINUATION = JSON.stringify({
   semanticSignals: [
     { id: "vague_location", triggered: true, evidence: "Work location: various client sites" },
     { id: "salary_precision", triggered: false, evidence: null },
@@ -39,11 +40,11 @@ const CLAUDE_JSON = JSON.stringify({
   claudeVerdict: "likely_perm",
   claudeScore: 80,
   reasoning: "Multiple PERM indicators present. AND-chaining and vague location strongly suggest a dummy posting.",
-})
+}).slice(1) // strip the leading "{" since we pre-filled it
 
 function mockSuccess() {
   mockCreate.mockResolvedValue({
-    content: [{ type: "text", text: CLAUDE_JSON }],
+    content: [{ type: "text", text: CLAUDE_CONTINUATION }],
   })
 }
 
@@ -86,9 +87,9 @@ describe("analyzeJDWithClaude", () => {
     expect(result).toBeNull()
   })
 
-  it("returns null when response is not valid JSON", async () => {
+  it("returns null when response continuation is not valid JSON", async () => {
     mockCreate.mockResolvedValue({
-      content: [{ type: "text", text: "I cannot help with that." }],
+      content: [{ type: "text", text: "not valid json at all" }],
     })
     const result = await analyzeJDWithClaude("some JD text", [])
     expect(result).toBeNull()

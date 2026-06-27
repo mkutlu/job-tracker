@@ -59,44 +59,33 @@ function buildPrompt(jdText: string, triggeredSignals: SignalResult[]): string {
       ? triggeredSignals.map((s) => `- ${s.label}: ${s.evidence ?? "triggered"}`).join("\n")
       : "None"
 
-  return `You are an expert in US immigration labor law, specifically PERM labor certification.
-
-PERM (Program Electronic Review Management) is a DOL application required for an employer-sponsored Green Card. Companies sometimes post "dummy" job descriptions as part of the PERM process. These are NOT real openings — they are written narrowly to match one specific foreign worker's existing profile so no qualified US worker can be found.
-
-A rule-based engine has already scanned this JD. Your job is to add semantic and tonal analysis that regex cannot catch.
-
-RULE ENGINE FINDINGS (triggered signals):
-${triggeredSummary}
-
-JOB DESCRIPTION:
----
-${jdText.slice(0, 3000)}
----
-
-Evaluate these FIVE semantic signals and return ONLY valid JSON (no markdown, no explanation):
-
-{
-  "semanticSignals": [
-    { "id": "vague_location", "triggered": true/false, "evidence": "quoted text or null" },
-    { "id": "salary_precision", "triggered": true/false, "evidence": "quoted text or null" },
-    { "id": "no_company_personality", "triggered": true/false, "evidence": null },
-    { "id": "passive_impersonal_tone", "triggered": true/false, "evidence": "quoted text or null" },
-    { "id": "artificially_narrow", "triggered": true/false, "evidence": "quoted text or null" }
-  ],
-  "claudeVerdict": "likely_perm" | "suspicious" | "probably_legitimate",
-  "claudeScore": 0-100,
-  "reasoning": "2 sentences max about the top indicators"
-}
-
-Signal guide:
-1. vague_location — Work location is vague ("client sites", "various unanticipated locations", no city/state)
-2. salary_precision — Salary listed as a single exact dollar amount with no range
-3. no_company_personality — No employer branding: no mission, team culture, benefits, or reason to apply
-4. passive_impersonal_tone — "Applicant must", "candidate shall" throughout instead of inviting tone
-5. artificially_narrow — Exact years (not "5+") or hyper-specific tech designed to exclude
-
-Scoring: 0-34 = probably_legitimate, 35-64 = suspicious, 65-100 = likely_perm.
-Factor in both rule engine findings and your semantic analysis.`
+  return [
+    "You are a PERM labor certification expert. PERM is a US DOL process companies use to sponsor foreign workers for Green Cards.",
+    "Companies sometimes post dummy job descriptions designed to match one specific foreign worker — written so narrowly that no US worker qualifies.",
+    "",
+    "A rule-based engine already scanned this JD. Add semantic/tonal signals that regex cannot catch.",
+    "",
+    "RULE ENGINE FINDINGS:",
+    triggeredSummary,
+    "",
+    "JOB DESCRIPTION:",
+    "---",
+    jdText.slice(0, 3000),
+    "---",
+    "",
+    "Complete the JSON by evaluating these five signals.",
+    "Set triggered to true/false and evidence to a short quoted phrase or null.",
+    "",
+    "Signal definitions:",
+    "1. vague_location — no specific city/state; just 'client sites' or 'various unanticipated locations'",
+    "2. salary_precision — single exact dollar amount with no range (DOL prevailing wage pattern)",
+    "3. no_company_personality — no mission, culture, benefits, or reason to apply; pure requirements list",
+    "4. passive_impersonal_tone — 'applicant must', 'candidate shall' throughout; no inviting voice",
+    "5. artificially_narrow — exact years (not '5+') or hyper-specific tech combinations to exclude most candidates",
+    "",
+    "Scoring guide: 0-34 = probably_legitimate, 35-64 = suspicious, 65-100 = likely_perm.",
+    "Factor rule engine findings into your score. Keep reasoning to 2 sentences.",
+  ].join("\n")
 }
 
 // ── API call ────────────────────────────────────────────────────
@@ -112,14 +101,16 @@ export async function analyzeJDWithClaude(
   try {
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
-      messages: [{ role: "user", content: buildPrompt(jdText, triggeredSignals) }],
+      max_tokens: 600,
+      // Assistant prefill forces JSON output — the model cannot un-say the opening brace
+      messages: [
+        { role: "user", content: buildPrompt(jdText, triggeredSignals) },
+        { role: "assistant", content: "{" },
+      ],
     })
 
     const raw = message.content[0].type === "text" ? message.content[0].text : ""
-    // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
-    const text = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim()
-    const parsed = JSON.parse(text)
+    const parsed = JSON.parse("{" + raw)
     return ClaudeAnalysisSchema.parse(parsed)
   } catch (err) {
     console.error("[jd-analyzer-claude] failed:", err instanceof Error ? err.message : err)
