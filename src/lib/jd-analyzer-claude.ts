@@ -116,11 +116,13 @@ export async function analyzeJDWithClaude(
       messages: [{ role: "user", content: buildPrompt(jdText, triggeredSignals) }],
     })
 
-    const text = message.content[0].type === "text" ? message.content[0].text : ""
+    const raw = message.content[0].type === "text" ? message.content[0].text : ""
+    // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+    const text = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim()
     const parsed = JSON.parse(text)
     return ClaudeAnalysisSchema.parse(parsed)
   } catch (err) {
-    console.error("[jd-analyzer-claude] API call failed:", err)
+    console.error("[jd-analyzer-claude] failed:", err instanceof Error ? err.message : err)
     return null
   }
 }
