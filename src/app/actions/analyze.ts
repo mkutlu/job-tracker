@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { createServerSupabaseClient } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
 import { analyzeJD } from "@/lib/jd-analyzer"
+import { analyzeJDWithClaude } from "@/lib/jd-analyzer-claude"
 
 export async function getSavedJobsForAnalysis() {
   const supabase = await createServerSupabaseClient()
@@ -33,5 +34,7 @@ export async function runAnalysis(text: string) {
   }
 
   const result = analyzeJD(trimmed)
-  return { success: true as const, result }
+  const triggeredSignals = result.signals.filter((s) => s.triggered)
+  const claudeAnalysis = await analyzeJDWithClaude(trimmed, triggeredSignals)
+  return { success: true as const, result, claudeAnalysis }
 }

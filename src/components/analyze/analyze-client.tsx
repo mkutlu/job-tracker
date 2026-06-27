@@ -4,10 +4,12 @@ import { useState, useTransition } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   AlertTriangle, CheckCircle, ShieldAlert, ChevronDown,
-  Loader2, FileText, ClipboardPaste,
+  Loader2, FileText, ClipboardPaste, Sparkles,
 } from "lucide-react"
 import { runAnalysis } from "@/app/actions/analyze"
 import type { AnalysisResult, SignalResult } from "@/lib/jd-analyzer"
+import type { ClaudeAnalysis } from "@/lib/jd-analyzer-claude"
+import { SEMANTIC_SIGNAL_LABELS } from "@/lib/jd-analyzer-claude"
 import { cn } from "@/lib/utils"
 
 type SavedJob = {
@@ -135,6 +137,7 @@ function SignalCard({ signal, index }: { signal: SignalResult; index: number }) 
 export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
   const [text, setText] = useState("")
   const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [claudeAnalysis, setClaudeAnalysis] = useState<ClaudeAnalysis | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -145,10 +148,12 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
 
   function handleAnalyze() {
     setError(null)
+    setClaudeAnalysis(null)
     startTransition(async () => {
       const res = await runAnalysis(text)
       if (res.success) {
         setResult(res.result)
+        setClaudeAnalysis(res.claudeAnalysis ?? null)
       } else {
         setError(res.error)
       }
@@ -288,9 +293,78 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
               </div>
             </div>
 
+            {/* Claude AI section */}
+            {claudeAnalysis && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.1 }}
+                className="flex flex-col gap-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles size={13} className="text-primary" />
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Claude AI — semantic analysis
+                  </p>
+                </div>
+
+                {/* Reasoning */}
+                <div className="border border-border bg-card px-4 py-3">
+                  <p className="text-xs text-muted-foreground leading-relaxed italic">
+                    "{claudeAnalysis.reasoning}"
+                  </p>
+                </div>
+
+                {/* Semantic signals */}
+                <div className="flex flex-col gap-2">
+                  {claudeAnalysis.semanticSignals.map((sig, i) => {
+                    const meta = SEMANTIC_SIGNAL_LABELS[sig.id]
+                    return (
+                      <div
+                        key={sig.id}
+                        className={cn(
+                          "border px-4 py-3 flex items-start gap-3",
+                          sig.triggered
+                            ? "border-amber-500/30 bg-amber-500/5"
+                            : "border-border bg-card"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-2 h-2 rounded-full shrink-0 mt-1",
+                          sig.triggered ? "bg-amber-500" : "bg-emerald-500"
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            "text-sm font-medium",
+                            sig.triggered ? "text-foreground" : "text-muted-foreground"
+                          )}>
+                            {meta.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{meta.description}</p>
+                          {sig.evidence && (
+                            <p className="text-xs font-mono bg-accent/60 border border-border px-2 py-1.5 mt-1.5 break-words">
+                              {sig.evidence}
+                            </p>
+                          )}
+                        </div>
+                        <span className={cn(
+                          "text-xs font-semibold shrink-0 px-2 py-0.5 border mt-0.5",
+                          sig.triggered
+                            ? "text-amber-500 border-amber-500/30 bg-amber-500/10"
+                            : "text-muted-foreground border-border"
+                        )}>
+                          {sig.triggered ? "flagged" : "clear"}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            )}
+
             <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-              This analysis is based on pattern matching and is not legal advice. Some legitimate
-              postings may score higher due to technical writing style. Use as one signal among many.
+              This analysis is based on pattern matching and AI inference and is not legal advice.
+              Use as one signal among many when evaluating job postings.
             </p>
           </motion.div>
         )}
