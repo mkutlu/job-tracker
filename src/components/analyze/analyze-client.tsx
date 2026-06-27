@@ -138,6 +138,8 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
   const [text, setText] = useState("")
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [claudeAnalysis, setClaudeAnalysis] = useState<ClaudeAnalysis | null>(null)
+  const [combinedScore, setCombinedScore] = useState<number | null>(null)
+  const [combinedVerdict, setCombinedVerdict] = useState<AnalysisResult["verdict"] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -149,18 +151,24 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
   function handleAnalyze() {
     setError(null)
     setClaudeAnalysis(null)
+    setCombinedScore(null)
+    setCombinedVerdict(null)
     startTransition(async () => {
       const res = await runAnalysis(text)
       if (res.success) {
         setResult(res.result)
         setClaudeAnalysis(res.claudeAnalysis ?? null)
+        setCombinedScore(res.combinedScore)
+        setCombinedVerdict(res.combinedVerdict)
       } else {
         setError(res.error)
       }
     })
   }
 
-  const verdict = result ? VERDICT_CONFIG[result.verdict] : null
+  const displayVerdict = combinedVerdict ?? result?.verdict ?? null
+  const displayScore = combinedScore ?? result?.score ?? null
+  const verdict = displayVerdict ? VERDICT_CONFIG[displayVerdict] : null
   const triggeredCount = result?.signals.filter((s) => s.triggered).length ?? 0
 
   return (
@@ -241,7 +249,7 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
 
       {/* Results */}
       <AnimatePresence>
-        {result && verdict && (
+        {result && verdict && displayScore !== null && (
           <motion.div
             key="results"
             initial={{ opacity: 0, y: 16 }}
@@ -265,18 +273,37 @@ export function AnalyzeClient({ savedJobs }: { savedJobs: SavedJob[] }) {
               </div>
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>PERM likelihood score</span>
+                  <span>PERM likelihood score{claudeAnalysis ? " (combined)" : ""}</span>
                   <span className="font-medium">
-                    {result.score < 35 ? "Low" : result.score < 65 ? "Medium" : "High"}
+                    {displayScore < 35 ? "Low" : displayScore < 65 ? "Medium" : "High"}
                   </span>
                 </div>
-                <ScoreBar score={result.score} verdict={result.verdict} />
+                <ScoreBar score={displayScore} verdict={displayVerdict!} />
                 <div className="flex justify-between text-[10px] text-muted-foreground/60 mt-0.5">
                   <span>Probably legitimate</span>
                   <span>Suspicious</span>
                   <span>Likely PERM</span>
                 </div>
               </div>
+              {claudeAnalysis && (
+                <div className="flex items-center gap-4 pt-1 border-t border-border/40">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span>Rule engine</span>
+                    <span className="font-semibold text-foreground">{result.score}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground/40">×0.6</div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Sparkles size={11} className="text-primary" />
+                    <span>Claude AI</span>
+                    <span className="font-semibold text-foreground">{claudeAnalysis.claudeScore}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground/40">×0.4</div>
+                  <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span>Combined</span>
+                    <span className="font-semibold text-foreground">{displayScore}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Signal breakdown */}

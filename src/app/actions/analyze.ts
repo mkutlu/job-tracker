@@ -36,5 +36,15 @@ export async function runAnalysis(text: string) {
   const result = analyzeJD(trimmed)
   const triggeredSignals = result.signals.filter((s) => s.triggered)
   const claudeAnalysis = await analyzeJDWithClaude(trimmed, triggeredSignals)
-  return { success: true as const, result, claudeAnalysis }
+
+  const combinedScore = claudeAnalysis
+    ? Math.round(result.score * 0.6 + claudeAnalysis.claudeScore * 0.4)
+    : result.score
+
+  const combinedVerdict =
+    combinedScore >= 65 ? "likely_perm" as const
+    : combinedScore >= 35 ? "suspicious" as const
+    : "probably_legitimate" as const
+
+  return { success: true as const, result, claudeAnalysis, combinedScore, combinedVerdict }
 }
