@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation"
 import { createServerSupabaseClient } from "@/lib/supabase-server"
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { analyzeJD } from "@/lib/jd-analyzer"
 import { analyzeJDWithClaude } from "@/lib/jd-analyzer-claude"
 
@@ -36,26 +37,52 @@ export async function getRecentPermAnalyses() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
-  return prisma.job.findMany({
+  // Include orphaned analyses (jobId = null after job deletion) by querying JDAnalysis directly
+  const analyses = await prisma.jDAnalysis.findMany({
     where: {
-      userId: user.id,
-      jdAnalysis: { permScore: { not: null } },
+      permScore: { not: null },
+      job: { userId: user.id },
     },
     select: {
-      id: true,
-      title: true,
-      company: { select: { name: true } },
-      jdAnalysis: {
+      jobId: true,
+      permScore: true,
+      permVerdict: true,
+      permAnalyzedAt: true,
+      job: {
         select: {
-          permScore: true,
-          permVerdict: true,
-          permAnalyzedAt: true,
+          id: true,
+          title: true,
+          company: { select: { name: true } },
         },
       },
     },
-    orderBy: { jdAnalysis: { permAnalyzedAt: "desc" } },
+    orderBy: { permAnalyzedAt: "desc" },
     take: 10,
   })
+
+  return analyses
+}
+
+export async function deletePermAnalysis(jobId: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  // IDOR check: verify the analysis belongs to this user via job ownership
+  const job = await prisma.job.findFirst({ where: { id: jobId, userId: user.id } })
+  if (!job) return { success: false as const, error: "Not found" }
+
+  await prisma.jDAnalysis.update({
+    where: { jobId },
+    data: {
+      permScore: null,
+      permVerdict: null,
+      permData: Prisma.JsonNull,
+      permAnalyzedAt: null,
+    },
+  })
+
+  return { success: true as const }
 }
 
 export async function runAnalysis(text: string, jobId?: string) {

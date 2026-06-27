@@ -6,7 +6,7 @@ import {
   AlertTriangle, CheckCircle, ShieldAlert, ChevronDown,
   Loader2, FileText, ClipboardPaste, Sparkles,
 } from "lucide-react"
-import { runAnalysis } from "@/app/actions/analyze"
+import { runAnalysis, deletePermAnalysis } from "@/app/actions/analyze"
 import type { AnalysisResult, SignalResult } from "@/lib/jd-analyzer"
 import type { ClaudeAnalysis } from "@/lib/jd-analyzer-claude"
 import { SEMANTIC_SIGNAL_LABELS } from "@/lib/jd-analyzer-claude"
@@ -437,10 +437,26 @@ export function AnalyzeClient({ savedJobs, initialJobId }: { savedJobs: SavedJob
               </motion.div>
             )}
 
-            <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-              This analysis is based on pattern matching and AI inference and is not legal advice.
-              Use as one signal among many when evaluating job postings.
-            </p>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                This analysis is based on pattern matching and AI inference and is not legal advice.
+                Use as one signal among many when evaluating job postings.
+              </p>
+              {selectedJobId && (
+                <button
+                  onClick={async () => {
+                    await deletePermAnalysis(selectedJobId)
+                    setResult(null)
+                    setClaudeAnalysis(null)
+                    setCombinedScore(null)
+                    setCombinedVerdict(null)
+                  }}
+                  className="shrink-0 text-[11px] text-muted-foreground/50 hover:text-destructive transition-colors"
+                >
+                  Remove analysis
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
