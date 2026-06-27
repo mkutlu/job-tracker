@@ -92,12 +92,13 @@ export async function analyzeJDWithClaude(
 
   try {
     const { object } = await generateObject({
-      model: anthropic("claude-haiku-4-5-20251001"),
+      model: anthropic("claude-3-5-haiku-20241022"),
       schema: ClaudeAnalysisSchema,
       prompt: buildPrompt(jdText, triggeredSignals),
     })
     return object
-  } catch {
+  } catch (err) {
+    console.error("[jd-analyzer-claude] API call failed:", err)
     return null
   }
 }
