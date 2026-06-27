@@ -95,8 +95,8 @@ model Activity {
 
 model JDAnalysis {
   id                String   @id @default(cuid())
-  jobId             String   @unique
-  job               Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId             String?  @unique
+  job               Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
   summary           String?  @db.Text
   requiredSkills    String[] // extracted required skills
   niceToHaveSkills  String[] // extracted nice-to-have skills

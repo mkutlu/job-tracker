@@ -202,7 +202,7 @@ export default async function OverviewPage() {
       </div>
 
       {recentAnalyses.length > 0 && (
-        <PermAnalysisTable rows={recentAnalyses as Parameters<typeof PermAnalysisTable>[0]["rows"]} />
+        <PermAnalysisTable rows={recentAnalyses} />
       )}
     </div>
   )

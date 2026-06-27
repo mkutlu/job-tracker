@@ -6,13 +6,14 @@ import { ShieldAlert, AlertTriangle, CheckCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type PermRow = {
-  id: string
-  title: string
-  company: { name: string }
-  jdAnalysis: {
-    permScore: number | null
-    permVerdict: string | null
-    permAnalyzedAt: string | Date | null
+  jobId: string | null
+  permScore: number | null
+  permVerdict: string | null
+  permAnalyzedAt: string | Date | null
+  job: {
+    id: string
+    title: string
+    company: { name: string }
   } | null
 }
 
@@ -67,53 +68,65 @@ export function PermAnalysisTable({ rows }: { rows: PermRow[] }) {
 
       <div className="divide-y divide-border">
         {rows.map((row, i) => {
-          const analysis = row.jdAnalysis
-          if (!analysis?.permScore || !analysis.permVerdict) return null
-          const cfg = VERDICT[analysis.permVerdict as keyof typeof VERDICT]
+          if (!row.permScore || !row.permVerdict) return null
+          const cfg = VERDICT[row.permVerdict as keyof typeof VERDICT]
           if (!cfg) return null
           const Icon = cfg.icon
+          const title = row.job?.title ?? "Deleted job"
+          const companyName = row.job?.company.name ?? "—"
 
-          return (
-            <motion.div
-              key={row.id}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.22, delay: i * 0.04 }}
-            >
-            <Link
-              href={`/analyze?jobId=${row.id}`}
-              className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors"
-            >
+          const inner = (
+            <>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{row.title}</p>
-                <p className="text-xs text-muted-foreground truncate">{row.company.name}</p>
+                <p className={cn("text-sm font-medium truncate", row.job ? "text-foreground" : "text-muted-foreground")}>
+                  {title}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">{companyName}</p>
               </div>
-
               <div className="flex items-center gap-1.5 shrink-0">
                 <div className="w-16 h-1.5 bg-border rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${analysis.permScore}%` }}
+                    animate={{ width: `${row.permScore}%` }}
                     transition={{ duration: 0.6, delay: i * 0.04 + 0.1 }}
                     className={cn("h-full rounded-full", cfg.bar)}
                   />
                 </div>
                 <span className={cn("text-xs font-semibold tabular-nums w-6 text-right", cfg.color)}>
-                  {analysis.permScore}
+                  {row.permScore}
                 </span>
               </div>
-
               <div className={cn("flex items-center gap-1 border px-2 py-0.5 shrink-0", cfg.bg)}>
                 <Icon size={11} className={cfg.color} />
                 <span className={cn("text-[11px] font-medium", cfg.color)}>{cfg.label}</span>
               </div>
-
-              {analysis.permAnalyzedAt && (
+              {row.permAnalyzedAt && (
                 <span className="text-[11px] text-muted-foreground/60 shrink-0 w-14 text-right">
-                  {timeAgo(analysis.permAnalyzedAt)}
+                  {timeAgo(row.permAnalyzedAt)}
                 </span>
               )}
-            </Link>
+            </>
+          )
+
+          return (
+            <motion.div
+              key={row.jobId ?? i}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.22, delay: i * 0.04 }}
+            >
+              {row.job ? (
+                <Link
+                  href={`/analyze?jobId=${row.job.id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors"
+                >
+                  {inner}
+                </Link>
+              ) : (
+                <div className="flex items-center gap-3 px-4 py-3 opacity-50">
+                  {inner}
+                </div>
+              )}
             </motion.div>
           )
         })}
