@@ -1,7 +1,8 @@
-import { anthropic } from "@ai-sdk/anthropic"
-import { generateObject } from "ai"
+import Anthropic from "@anthropic-ai/sdk"
 import { z } from "zod"
 import type { SignalResult } from "./jd-analyzer"
+
+// ── Schema ─────────────────────────────────────────────────────
 
 const SemanticSignalSchema = z.object({
   id: z.enum([
@@ -24,6 +25,8 @@ const ClaudeAnalysisSchema = z.object({
 
 export type SemanticSignal = z.infer<typeof SemanticSignalSchema>
 export type ClaudeAnalysis = z.infer<typeof ClaudeAnalysisSchema>
+
+// ── Labels ─────────────────────────────────────────────────────
 
 export const SEMANTIC_SIGNAL_LABELS: Record<SemanticSignal["id"], { label: string; description: string }> = {
   vague_location: {
@@ -48,6 +51,8 @@ export const SEMANTIC_SIGNAL_LABELS: Record<SemanticSignal["id"], { label: strin
   },
 }
 
+// ── Prompt ─────────────────────────────────────────────────────
+
 function buildPrompt(jdText: string, triggeredSignals: SignalResult[]): string {
   const triggeredSummary =
     triggeredSignals.length > 0
@@ -68,21 +73,33 @@ JOB DESCRIPTION:
 ${jdText.slice(0, 3000)}
 ---
 
-Evaluate these FIVE semantic signals:
+Evaluate these FIVE semantic signals and return ONLY valid JSON (no markdown, no explanation):
 
-1. vague_location — Work location is vague ("client sites", "various unanticipated locations", no specific city/state)
-2. salary_precision — Salary listed as a single exact dollar amount with no range (suggests DOL prevailing wage)
-3. no_company_personality — No employer branding: no mission, team culture, benefits, or reason to apply
-4. passive_impersonal_tone — Written in passive/third-person throughout ("applicant must", "candidate shall") rather than inviting tone
-5. artificially_narrow — Exact years experience (not "5+") or hyper-specific tech combinations designed to exclude
-
-For claudeScore: factor in both what the rule engine found and what you see semantically.
-  - 0–34: probably legitimate
-  - 35–64: suspicious
-  - 65–100: likely PERM
-
-For reasoning: 2 sentences maximum. Be direct about the top indicators.`
+{
+  "semanticSignals": [
+    { "id": "vague_location", "triggered": true/false, "evidence": "quoted text or null" },
+    { "id": "salary_precision", "triggered": true/false, "evidence": "quoted text or null" },
+    { "id": "no_company_personality", "triggered": true/false, "evidence": null },
+    { "id": "passive_impersonal_tone", "triggered": true/false, "evidence": "quoted text or null" },
+    { "id": "artificially_narrow", "triggered": true/false, "evidence": "quoted text or null" }
+  ],
+  "claudeVerdict": "likely_perm" | "suspicious" | "probably_legitimate",
+  "claudeScore": 0-100,
+  "reasoning": "2 sentences max about the top indicators"
 }
+
+Signal guide:
+1. vague_location — Work location is vague ("client sites", "various unanticipated locations", no city/state)
+2. salary_precision — Salary listed as a single exact dollar amount with no range
+3. no_company_personality — No employer branding: no mission, team culture, benefits, or reason to apply
+4. passive_impersonal_tone — "Applicant must", "candidate shall" throughout instead of inviting tone
+5. artificially_narrow — Exact years (not "5+") or hyper-specific tech designed to exclude
+
+Scoring: 0-34 = probably_legitimate, 35-64 = suspicious, 65-100 = likely_perm.
+Factor in both rule engine findings and your semantic analysis.`
+}
+
+// ── API call ────────────────────────────────────────────────────
 
 export async function analyzeJDWithClaude(
   jdText: string,
@@ -90,13 +107,18 @@ export async function analyzeJDWithClaude(
 ): Promise<ClaudeAnalysis | null> {
   if (!process.env.ANTHROPIC_API_KEY) return null
 
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
   try {
-    const { object } = await generateObject({
-      model: anthropic("claude-3-5-haiku-20241022"),
-      schema: ClaudeAnalysisSchema,
-      prompt: buildPrompt(jdText, triggeredSignals),
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      messages: [{ role: "user", content: buildPrompt(jdText, triggeredSignals) }],
     })
-    return object
+
+    const text = message.content[0].type === "text" ? message.content[0].text : ""
+    const parsed = JSON.parse(text)
+    return ClaudeAnalysisSchema.parse(parsed)
   } catch (err) {
     console.error("[jd-analyzer-claude] API call failed:", err)
     return null

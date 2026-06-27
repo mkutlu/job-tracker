@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.0.0",
+    "@anthropic-ai/sdk": "^0.106.0",
     "@prisma/client": "^6.0.0",
     "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.0",
