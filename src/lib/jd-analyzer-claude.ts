@@ -152,7 +152,12 @@ export async function analyzeJDWithClaude(
       return null
     }
 
-    // Zod coerces the input to the right shape and validates
+    if (message.usage) {
+      const { input_tokens, output_tokens } = message.usage
+      const costUsd = (input_tokens / 1_000_000) * 1.0 + (output_tokens / 1_000_000) * 5.0
+      console.log(`[jd-analyzer-claude] tokens: ${input_tokens} in / ${output_tokens} out — $${costUsd.toFixed(5)}`)
+    }
+
     return ClaudeAnalysisSchema.parse(toolBlock.input)
   } catch (err) {
     console.error("[jd-analyzer-claude] failed:", err instanceof Error ? err.message : err)

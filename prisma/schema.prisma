@@ -106,6 +106,10 @@ model JDAnalysis {
   redFlags          String[] // potential red flags in the JD
   matchScore        Int?     // 0-100, how well user profile matches
   rawAnalysis       Json?    // full Claude response
+  permScore         Int?     // 0-100 combined PERM likelihood score
+  permVerdict       String?  // "likely_perm" | "suspicious" | "probably_legitimate"
+  permData          Json?    // full PERM analysis (rule signals + claude signals)
+  permAnalyzedAt    DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

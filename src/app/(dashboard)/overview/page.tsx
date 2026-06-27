@@ -9,6 +9,8 @@ import { SourceBars } from "@/components/overview/source-bars"
 import { UpcomingSteps } from "@/components/overview/upcoming-steps"
 import { StatCards } from "@/components/overview/stat-cards"
 import type { StatDef } from "@/components/overview/stat-cards"
+import { PermAnalysisTable } from "@/components/overview/perm-analysis-table"
+import { getRecentPermAnalyses } from "@/app/actions/analyze"
 
 const STATUS_CHART_COLORS: Record<JobStatus, string> = {
   BOOKMARKED:   "#94a3b8",
@@ -40,7 +42,8 @@ export default async function OverviewPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
-  const jobs = await prisma.job.findMany({
+  const [jobs, recentAnalyses] = await Promise.all([
+    prisma.job.findMany({
     where: { userId: user.id },
     select: {
       id: true,
@@ -52,7 +55,9 @@ export default async function OverviewPage() {
       company: { select: { name: true } },
     },
     orderBy: { createdAt: "desc" },
-  })
+    }),
+    getRecentPermAnalyses(),
+  ])
 
   // ── Stats ─────────────────────────────────────────────────────
   const now = new Date()
@@ -195,6 +200,10 @@ export default async function OverviewPage() {
         <UpcomingSteps items={upcoming} />
         <SourceBars data={sourceData} total={total} />
       </div>
+
+      {recentAnalyses.length > 0 && (
+        <PermAnalysisTable rows={recentAnalyses as Parameters<typeof PermAnalysisTable>[0]["rows"]} />
+      )}
     </div>
   )
 }
